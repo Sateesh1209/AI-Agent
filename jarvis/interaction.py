@@ -81,5 +81,15 @@ def ask_user(
                 return pending.answer
         finally:
             RUNTIME.pending_question = None
+        return None
 
+    # No Telegram set up: the user is at the keyboard, so wait (blocking) for
+    # them to answer — e.g. after they finish logging into a portal.
+    try:
+        if sys.stdin and sys.stdin.isatty():
+            print("(JARVIS is waiting — type your answer and press Enter)")
+            line = input("> ").strip()
+            return line or None
+    except (EOFError, KeyboardInterrupt):
+        return None
     return None
