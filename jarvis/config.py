@@ -54,6 +54,13 @@ class Config:
     chrome_user_data_dir: str = os.getenv(
         "JARVIS_CHROME_DIR", str(Path.home() / ".jarvis" / "chrome")
     )
+    # Preferred: attach to a normal Chrome you launched + logged into, so
+    # Google sign-in works. The 'login' command starts it on this port.
+    chrome_cdp_url: str = os.getenv("JARVIS_CHROME_CDP", "http://localhost:9222")
+    chrome_debug_dir: str = os.getenv(
+        "JARVIS_CHROME_DEBUG_DIR", str(Path.home() / ".jarvis" / "chrome-debug")
+    )
+    chrome_debug_port: int = int(os.getenv("JARVIS_CHROME_PORT", "9222"))
 
     def validate(self) -> None:
         """Raise a friendly error if the chosen backend is misconfigured."""

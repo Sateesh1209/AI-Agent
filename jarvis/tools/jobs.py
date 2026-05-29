@@ -56,7 +56,7 @@ def apply_to_jobs(board_url: str, max_jobs: int = 5) -> str:
     from ..jobs.browser import BrowserSession
 
     profile = _load_profile()
-    session = BrowserSession(config.chrome_user_data_dir, headless=False)
+    session = BrowserSession.from_config(config)
     try:
         session.start()
         return apply_from_job_board(
@@ -92,7 +92,7 @@ def apply_to_jobs(board_url: str, max_jobs: int = 5) -> str:
 def setup_job_login(url: str) -> str:
     from ..jobs.browser import BrowserSession
 
-    session = BrowserSession(config.chrome_user_data_dir, headless=False)
+    session = BrowserSession.from_config(config)
     session.start()
     session.goto(url)
     return (
@@ -118,7 +118,7 @@ def list_greenhouse_jobs(board_url: str) -> str:
     from ..jobs.browser import BrowserSession
     from ..jobs.greenhouse import list_jobs
 
-    session = BrowserSession(config.chrome_user_data_dir, headless=False)
+    session = BrowserSession.from_config(config)
     try:
         session.start()
         jobs = list_jobs(session, board_url)
