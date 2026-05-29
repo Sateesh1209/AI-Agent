@@ -15,9 +15,68 @@ Setup:
 
 from __future__ import annotations
 
+import re
+import threading
+
 from ..agent import Jarvis
 from ..config import config
 from ..notify import TelegramNotifier
+
+# Guard so only one job-application run happens at a time.
+_apply_running = threading.Lock()
+
+
+def _looks_like_apply(text: str) -> int | None:
+    """If the message is an 'apply to jobs' command, return how many jobs."""
+    t = text.lower().strip()
+    if not t.startswith(("apply", "/apply")):
+        return None
+    m = re.search(r"\d+", t)
+    return int(m.group(0)) if m else 1
+
+
+def _run_apply_agent(count: int, notifier) -> None:
+    """Run the autonomous job agent (in a background thread) for ``count`` jobs."""
+    from ..brain import claude_oneshot
+    from ..jobs.browser import BrowserSession
+    from ..jobs.webagent import JOBRIGHT_GOAL, WebAgent
+
+    if not _apply_running.acquire(blocking=False):
+        notifier.send("I'm already applying to jobs — let me finish this one. 🙂")
+        return
+    try:
+        session = BrowserSession.from_config(config)
+        try:
+            session.start()
+        except Exception as exc:  # noqa: BLE001
+            notifier.send(
+                "I couldn't reach your Chrome. On your laptop run "
+                "'python main.py login https://jobright.ai' and keep that window "
+                f"open, then try again.\n({exc})"
+            )
+            return
+        session.focus("jobright")
+        agent = WebAgent(session, decide=claude_oneshot, notifier=notifier)
+        for n in range(count):
+            notifier.send(f"🤖 Working on job {n + 1} of {count}…")
+            try:
+                result = agent.run(JOBRIGHT_GOAL, max_steps=30)
+                notifier.send(f"Job {n + 1}: {result[:350]}")
+            except Exception as exc:  # noqa: BLE001
+                notifier.send(f"⚠️ Hit a problem on job {n + 1}: {exc}")
+            try:
+                session.focus("jobright")
+                session.goto("https://jobright.ai/jobs/recommend")
+                session.page.wait_for_timeout(2000)
+            except Exception:
+                pass
+        notifier.send("✅ Done with this batch. Review the browser when you can.")
+        try:
+            session.close()
+        except Exception:
+            pass
+    finally:
+        _apply_running.release()
 
 
 def run() -> None:
@@ -76,6 +135,18 @@ def run() -> None:
         if pending is not None:
             pending.respond(update.message.text)
             await update.message.reply_text("Got it — continuing. 👍")
+            return
+
+        # "apply jobs" / "apply 3 jobs" -> launch the autonomous job agent.
+        count = _looks_like_apply(update.message.text)
+        if count is not None:
+            await update.message.reply_text(
+                f"On it — I'll apply to {count} job(s) and ask you here if I "
+                "need a login or your OK. 🚀"
+            )
+            threading.Thread(
+                target=_run_apply_agent, args=(count, notifier), daemon=True
+            ).start()
             return
 
         reply = jarvis.ask(update.message.text)

@@ -44,6 +44,26 @@ Rules:
 """
 
 
+JOBRIGHT_GOAL = (
+    "You are on JobRight (jobright.ai), logged in as Sateesh Kumar Nunna, a "
+    "Senior Data Engineer (7 years; Python, SQL, Spark, Snowflake, AWS/Azure/GCP). "
+    "Apply to the NEXT not-yet-applied job in the recommendations list:\n"
+    "1. Click that job's 'Apply with Autofill' button (it may open a NEW tab on "
+    "the company's portal — work in that newest tab).\n"
+    "2. On the company portal, click 'Apply' / 'Apply now' to open the form.\n"
+    "3. If the portal needs SIGN IN / login, use ask_user with value "
+    "'LOGIN NEEDED: <portal> — please sign in to that portal in the Chrome "
+    "window, then reply done'. Then continue.\n"
+    "4. If JobRight offers 'Customize/Generate resume' (full edit + add missing "
+    "skills), use it, wait ~15s, then 'upload' the downloaded resume to any "
+    "resume file input.\n"
+    "5. Fill empty REQUIRED fields sensibly; use ask_user for personal info you "
+    "don't have.\n"
+    "6. Do NOT click the final Submit — use ask_user 'CONFIRM_SUBMIT: <summary>'.\n"
+    "When the application is submitted or handed to the user, use 'done'."
+)
+
+
 def parse_action(text: str) -> dict | None:
     if not text:
         return None
