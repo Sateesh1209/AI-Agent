@@ -60,6 +60,13 @@ def run() -> None:
             print(f"  {OK if key else NO} ANTHROPIC_API_KEY "
                   f"{'set (' + key[:7] + '…)' if key else 'MISSING'}")
             print(f"  Model: {config.model}")
+        elif config.backend == "claude_code":
+            import shutil
+
+            has_claude = shutil.which("claude") is not None
+            print(f"  {OK if has_claude else NO} Claude Code ('claude' command) "
+                  f"{'installed' if has_claude else 'NOT installed'}")
+            print("  Brain: your Claude subscription (no API key needed)")
         else:
             print(f"  Ollama host: {config.ollama_host}  model: {config.ollama_model}")
         print(f"  {OK if config.telegram_token else WARN} Telegram token "

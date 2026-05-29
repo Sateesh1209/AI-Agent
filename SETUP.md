@@ -9,6 +9,46 @@ brain that runs on your own Mac (no API key, no cost).
 
 ---
 
+## 🌟 Recommended: use your Claude Max/Pro subscription (smart + free for you)
+
+If you already pay for **Claude Max or Pro**, this is the best brain — powerful
+Claude intelligence at **no extra cost**, powered by **Claude Code**.
+
+1. **Install Node.js** (one time) from https://nodejs.org (the "LTS" version).
+2. **Install Claude Code:**
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   ```
+3. **Log in with your Claude account** (the one with Max/Pro):
+   ```bash
+   claude
+   ```
+   Follow the `/login` browser prompt, then type `exit` to leave.
+4. **Point JARVIS at it** — open the settings file:
+   ```bash
+   open -e .env
+   ```
+   Make it contain just this one line:
+   ```
+   JARVIS_BACKEND=claude_code
+   ```
+   Save and close. (No API key needed — it uses your subscription.)
+5. **Check it:**
+   ```bash
+   python main.py check
+   ```
+   You want `Backend: claude_code` ✅ and **"JARVIS is working!"**
+
+Then skip to **Step 7** below to talk to JARVIS. The free-Ollama steps are an
+alternative if you'd rather not use a subscription.
+
+> 💡 This uses your Claude plan's included usage. It's intended for personal use
+> on your own machine.
+
+---
+
+## Alternative: free local brain (Ollama)
+
 ## What you need
 - A Mac
 - About 15 minutes

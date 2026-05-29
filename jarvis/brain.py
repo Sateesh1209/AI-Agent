@@ -124,10 +124,77 @@ class OllamaBrain:
         return "I tried several steps but couldn't finish that. Please rephrase."
 
 
+class ClaudeCodeBrain:
+    """Use the Claude Code CLI (``claude``) as the brain.
+
+    This lets JARVIS run on a Claude Max/Pro *subscription* (no per-token API
+    fees): the ``claude`` command is logged in with the user's account. Claude
+    Code brings its own powerful built-in tools (Bash, file read/write, web),
+    so JARVIS can reliably act on the local machine.
+
+    Auth: relies on ``claude`` being logged in (``claude /login``) or a
+    ``CLAUDE_CODE_OAUTH_TOKEN`` env var. We deliberately drop ANTHROPIC_API_KEY
+    from the subprocess so the subscription is used, not paid API tokens.
+    """
+
+    # Built-in Claude Code tools JARVIS is allowed to use without prompts.
+    ALLOWED_TOOLS = "Bash Read Write Edit Glob Grep WebFetch WebSearch"
+
+    def __init__(self, config: Config, registry: ToolRegistry, system_prompt: str):
+        import shutil
+
+        if shutil.which("claude") is None:
+            raise RuntimeError(
+                "The 'claude' command (Claude Code) isn't installed. Install it "
+                "and log in with your Max account — see SETUP.md."
+            )
+        self.system_prompt = system_prompt
+        self.session_id: str | None = None
+
+    def chat(self, user_text: str) -> str:
+        import json
+        import os
+        import subprocess
+
+        cmd = [
+            "claude", "-p", user_text,
+            "--output-format", "json",
+            "--allowedTools", self.ALLOWED_TOOLS,
+        ]
+        if self.session_id:
+            cmd += ["--resume", self.session_id]
+        else:
+            cmd += ["--append-system-prompt", self.system_prompt]
+
+        env = os.environ.copy()
+        # Ensure the subscription (OAuth) is used rather than billed API tokens.
+        env.pop("ANTHROPIC_API_KEY", None)
+
+        try:
+            proc = subprocess.run(
+                cmd, capture_output=True, text=True, env=env, timeout=600
+            )
+        except FileNotFoundError:
+            return "Claude Code isn't installed. See SETUP.md."
+        except subprocess.TimeoutExpired:
+            return "That took too long, let's try a smaller step."
+
+        if proc.returncode != 0:
+            return f"(Claude Code error: {proc.stderr.strip()[:300]})"
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            return proc.stdout.strip() or "(no response)"
+        self.session_id = data.get("session_id", self.session_id)
+        return data.get("result", "") or "(done)"
+
+
 def make_brain(
     config: Config, registry: ToolRegistry, system_prompt: str
 ):
     """Factory that returns the brain matching the configured backend."""
     if config.backend == "ollama":
         return OllamaBrain(config, registry, system_prompt)
+    if config.backend == "claude_code":
+        return ClaudeCodeBrain(config, registry, system_prompt)
     return AnthropicBrain(config, registry, system_prompt)

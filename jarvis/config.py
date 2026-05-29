@@ -62,10 +62,19 @@ class Config:
                 "JARVIS_BACKEND is 'anthropic' but ANTHROPIC_API_KEY is not set. "
                 "Add it to your .env file, or switch JARVIS_BACKEND=ollama."
             )
-        if self.backend not in {"anthropic", "ollama"}:
+        if self.backend == "claude_code":
+            import shutil
+
+            if shutil.which("claude") is None:
+                raise RuntimeError(
+                    "JARVIS_BACKEND is 'claude_code' but the 'claude' command "
+                    "isn't installed. Install Claude Code and log in with your "
+                    "Max account (see SETUP.md)."
+                )
+        if self.backend not in {"anthropic", "ollama", "claude_code"}:
             raise RuntimeError(
                 f"Unknown JARVIS_BACKEND '{self.backend}'. "
-                "Use 'anthropic' or 'ollama'."
+                "Use 'anthropic', 'ollama', or 'claude_code'."
             )
 
 
