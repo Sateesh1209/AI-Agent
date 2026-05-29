@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -43,6 +44,15 @@ class Config:
     # Safety
     confirm_dangerous: bool = _as_bool(
         os.getenv("JARVIS_CONFIRM_DANGEROUS"), default=True
+    )
+
+    # Job applications
+    profile_path: str = os.getenv(
+        "JARVIS_PROFILE_PATH", str(Path.home() / ".jarvis" / "profile.json")
+    )
+    # JARVIS drives a dedicated Chrome profile so you stay logged in.
+    chrome_user_data_dir: str = os.getenv(
+        "JARVIS_CHROME_DIR", str(Path.home() / ".jarvis" / "chrome")
     )
 
     def validate(self) -> None:
