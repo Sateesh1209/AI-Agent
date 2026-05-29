@@ -113,6 +113,40 @@ Examples of things to say/type:
 - "Every weekday at 9am, apply to 5 new software jobs and message me the results."
 - "What tasks do you have scheduled?"
 
+## Applying to jobs (any board / aggregator)
+
+JARVIS can work through a job aggregator (Jobright or similar), click each
+job's **Apply / Apply-with-autofill** button, follow the redirect to **whatever
+portal** the job uses (Workday, Greenhouse, Lever, company sites), let the
+site's own autofill run, then **finish the remaining fields** from your profile
+and attach a tailored resume. Simple applications are submitted automatically;
+ones with tricky questions are screenshotted and sent to you on **Telegram** to
+finish.
+
+No passwords are stored — you log in **once** in JARVIS's own Chrome and the
+session is reused.
+
+**Setup (on your Mac):**
+
+```bash
+playwright install chromium          # one-time browser download
+cp profile.example.json ~/.jarvis/profile.json   # then fill it in
+python main.py login https://jobright.ai          # log into your sites once
+```
+
+Then just tell JARVIS (by voice / text / Telegram):
+
+> "Apply to 5 jobs on <my board url>."
+
+or schedule it:
+
+> "Every weekday at 9am, apply to 10 new jobs and message me the results."
+
+> ⚠️ Aggregators and portals change their page layouts often. The field-matching
+> logic is generic and unit-tested, but the apply-button/job-card selectors may
+> need light tuning the first time you run a new site live — we can do that
+> together.
+
 ## Adding your own tools
 
 Drop a function in `jarvis/tools/` and decorate it. That's it — JARVIS can now
@@ -143,9 +177,12 @@ Done:
 - ✅ Time + Telegram core: scheduler (reminders + recurring tasks) and
   proactive two-way Telegram.
 
+- ✅ Generic job-application autofill: log in once in JARVIS's Chrome, then
+  apply across any portal a job aggregator redirects to (site autofill +
+  JARVIS finishes the rest, submits simple ones, asks you for tricky ones).
+
 Next:
-- 🌐 Browser automation tool (Playwright) → access Chrome, auto-apply to jobs
-  on Workday, Greenhouse, company sites.
+- 🔧 Live selector tuning for your specific aggregator(s).
 - 📅 Calendar / email tools.
 - 🧠 Persistent conversation memory across sessions.
 - 🔊 Wake-word detection ("Hey JARVIS").

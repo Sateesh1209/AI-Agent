@@ -62,6 +62,15 @@ class BrowserSession:
         self.page.screenshot(path=path, full_page=True)
         return path
 
+    def use_latest_page(self):
+        """Switch to the most recently opened tab (e.g. after 'Apply')."""
+        if self._context and self._context.pages:
+            self.page = self._context.pages[-1]
+        return self.page
+
+    def page_count(self) -> int:
+        return len(self._context.pages) if self._context else 0
+
     # -- interaction -------------------------------------------------------
     def click(self, selector: str, timeout: int = 8000) -> bool:
         try:

@@ -8,7 +8,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from jarvis.jobs.greenhouse import classify_field  # noqa: E402
+from jarvis.jobs import autofill as autofill_mod  # noqa: E402
+from jarvis.jobs.autofill import autofill_current_page  # noqa: E402
+from jarvis.jobs.fields import classify_field, is_empty  # noqa: E402
 from jarvis.jobs.profile import Profile  # noqa: E402
 from jarvis.jobs.resume import tailor_resume_html  # noqa: E402
 
@@ -49,6 +51,57 @@ def test_resume_fallback_html_contains_profile():
     assert "<html" in html
     assert "Jane Public" in html
     assert "Python" in html
+
+
+def test_is_empty():
+    assert is_empty({"type": "text", "value": ""}) is True
+    assert is_empty({"type": "text", "value": "  "}) is True
+    assert is_empty({"type": "text", "value": "Jane"}) is False
+    assert is_empty({"type": "file", "value": ""}) is True  # files always attempted
+
+
+class _FakeSession:
+    """Records fill/upload calls; serves a fixed set of form fields."""
+
+    def __init__(self, fields):
+        self._fields = fields
+        self.filled = {}
+        self.uploaded = {}
+
+    def fill(self, selector, value):
+        self.filled[selector] = value
+        return True
+
+    def upload(self, selector, path):
+        self.uploaded[selector] = path
+        return True
+
+
+def _run_autofill(fields, profile, resume="/tmp/r.pdf"):
+    session = _FakeSession(fields)
+    # autofill_current_page reads fields via read_form_fields(session)
+    autofill_mod.read_form_fields = lambda s: s._fields
+    result = autofill_current_page(session, profile, resume)
+    return session, result
+
+
+def test_autofill_fills_empty_skips_filled_and_flags_tricky():
+    profile = Profile(full_name="Jane Public", email="jane@x.com")
+    fields = [
+        {"label": "First Name", "selector": "#fn", "type": "text",
+         "required": True, "value": ""},                       # fill
+        {"label": "Email", "selector": "#em", "type": "email",
+         "required": True, "value": "already@set.com"},        # skip (filled)
+        {"label": "Resume", "selector": "#cv", "type": "file",
+         "required": True, "value": ""},                       # attach
+        {"label": "Why us?", "selector": "#essay", "type": "textarea",
+         "required": True, "value": ""},                       # tricky -> flag
+    ]
+    session, result = _run_autofill(fields, profile)
+    assert session.filled.get("#fn") == "Jane"
+    assert "#em" not in session.filled            # already filled, left alone
+    assert session.uploaded.get("#cv") == "/tmp/r.pdf"
+    assert "Why us?" in result["tricky"]          # essay escalated to user
 
 
 if __name__ == "__main__":

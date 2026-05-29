@@ -6,6 +6,7 @@ Usage:
     python main.py text       # text chat in the terminal
     python main.py voice      # voice mode
     python main.py telegram   # run the Telegram bot
+    python main.py login [url]# open JARVIS's Chrome to log into job sites once
 """
 
 from __future__ import annotations
@@ -28,6 +29,10 @@ def main() -> None:
         from jarvis.interfaces import telegram_bot
 
         telegram_bot.run()
+    elif mode == "login":
+        from jarvis.interfaces import login
+
+        login.run(sys.argv[2] if len(sys.argv) > 2 else None)
     else:
         print(__doc__)
         sys.exit(1)
