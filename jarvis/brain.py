@@ -198,3 +198,29 @@ def make_brain(
     if config.backend == "claude_code":
         return ClaudeCodeBrain(config, registry, system_prompt)
     return AnthropicBrain(config, registry, system_prompt)
+
+
+def claude_oneshot(prompt: str, timeout: int = 120) -> str:
+    """One-off Claude reasoning via the CLI (no tools), using the subscription.
+
+    Used by the browser agent to decide the next action from a page's state.
+    """
+    import json
+    import os
+    import subprocess
+
+    cmd = ["claude", "-p", prompt, "--output-format", "json"]
+    env = os.environ.copy()
+    env.pop("ANTHROPIC_API_KEY", None)
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, env=env, timeout=timeout
+        )
+    except Exception:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    try:
+        return json.loads(proc.stdout).get("result", "") or ""
+    except json.JSONDecodeError:
+        return proc.stdout.strip()

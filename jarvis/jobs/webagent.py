@@ -1,0 +1,170 @@
+"""An autonomous browser agent driven by Claude.
+
+Instead of hand-coding every click for a specific site, JARVIS looks at the
+page's interactive elements, asks Claude for the single next action, performs
+it, and repeats. It escalates to the user (console/Telegram) when it needs
+info, and — for safety — never submits an application without the user's OK.
+
+Decisions use Claude via the subscription (free), so this works on a Max plan.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Callable
+
+from ..interaction import ask_user
+
+_ACTION_PROMPT = """You are JARVIS, controlling a web browser to accomplish a goal.
+
+GOAL: {goal}
+
+CURRENT PAGE: {url}
+TITLE: {title}
+RECENT ACTIONS:
+{history}
+
+INTERACTIVE ELEMENTS (act on one by its [index]):
+{elements}
+
+Decide the SINGLE next action. Respond with ONLY a JSON object (no prose):
+{{"action": "click|fill|upload|wait|ask_user|done", "index": <int or null>,
+  "value": "<text to type / question to ask / empty>", "reason": "<short>"}}
+
+Rules:
+- "click": click the element at "index".
+- "fill": type "value" into the input at "index".
+- "upload": attach the freshly-downloaded resume to the file input at "index".
+- "wait": page is still loading or generating; pause and look again.
+- "ask_user": you need info you don't have — put the question in "value".
+- NEVER click a final Submit / Apply-confirm button. Instead use "ask_user"
+  with value starting "CONFIRM_SUBMIT: " and a summary, so the human approves.
+- "done": the goal is finished (submitted, or handed to the user).
+"""
+
+
+def parse_action(text: str) -> dict | None:
+    if not text:
+        return None
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return None
+
+
+def collect_elements(page) -> list[tuple[object, str]]:
+    """Return [(handle, description)] for visible, actionable elements."""
+    items: list[tuple[object, str]] = []
+    try:
+        handles = page.query_selector_all(
+            "button, a, input, textarea, select, [role=button]"
+        )
+    except Exception:
+        return items
+    for h in handles:
+        try:
+            if not h.is_visible():
+                continue
+            tag = h.evaluate("e => e.tagName").lower()
+            if tag in ("input", "textarea", "select"):
+                kind = (h.get_attribute("type") or tag).lower()
+                if kind == "hidden":
+                    continue
+                label = (h.get_attribute("aria-label") or h.get_attribute("placeholder")
+                         or h.get_attribute("name") or "")
+                try:
+                    val = h.input_value()
+                except Exception:
+                    val = ""
+                desc = f"{kind} field '{label[:40]}' (current='{val[:20]}')"
+            else:
+                text = " ".join((h.inner_text() or "").split())
+                if not text:
+                    continue
+                desc = f"button/link '{text[:50]}'"
+            items.append((h, desc))
+        except Exception:
+            continue
+    return items
+
+
+class WebAgent:
+    def __init__(self, session, decide: Callable[[str], str], notifier=None):
+        self.session = session
+        self.decide = decide  # prompt -> raw text (Claude)
+        self.notifier = notifier
+
+    def run(self, goal: str, max_steps: int = 25) -> str:
+        from .downloads import latest_download
+
+        history: list[str] = []
+        for step in range(max_steps):
+            self.session.use_latest_page()
+            page = self.session.page
+            items = collect_elements(page)
+            elements = "\n".join(f"[{i}] {d}" for i, (_, d) in enumerate(items))
+            try:
+                title = page.title()
+            except Exception:
+                title = ""
+            prompt = _ACTION_PROMPT.format(
+                goal=goal, url=getattr(page, "url", ""), title=title,
+                history="\n".join(history[-6:]) or "(none yet)",
+                elements=elements[:6000] or "(none found)",
+            )
+            action = parse_action(self.decide(prompt))
+            if not action:
+                history.append("could not decide; waiting")
+                page.wait_for_timeout(1500)
+                continue
+
+            a = action.get("action")
+            idx = action.get("index")
+            val = action.get("value", "") or ""
+            print(f"[agent] step {step+1}: {a} idx={idx} {val[:40]} "
+                  f"— {action.get('reason','')[:60]}")
+
+            if a == "done":
+                return f"✅ Done: {action.get('reason', '')}"
+            if a == "wait":
+                page.wait_for_timeout(2500)
+                history.append("waited")
+                continue
+            if a == "ask_user":
+                answer = ask_user(val) or "(no answer)"
+                history.append(f"asked: {val[:60]} -> {answer[:60]}")
+                continue
+            if idx is None or not (0 <= idx < len(items)):
+                history.append(f"invalid index {idx}")
+                continue
+
+            handle, desc = items[idx]
+            try:
+                if a == "click":
+                    handle.click(timeout=8000)
+                    page.wait_for_timeout(1500)
+                    history.append(f"clicked {desc}")
+                elif a == "fill":
+                    handle.fill(val, timeout=8000)
+                    history.append(f"filled {desc} = {val[:30]}")
+                elif a == "upload":
+                    resume = latest_download()
+                    if resume:
+                        handle.set_input_files(resume, timeout=8000)
+                        history.append(f"uploaded resume to {desc}")
+                    else:
+                        history.append("no downloaded resume found to upload")
+                else:
+                    history.append(f"unknown action {a}")
+            except Exception as exc:  # noqa: BLE001
+                history.append(f"error doing {a} on {desc}: {exc}")
+
+        summary = "Stopped after max steps.\n" + "\n".join(history[-10:])
+        if self.notifier:
+            self.notifier.send("ℹ️ Job agent paused (reached step limit). "
+                               "Check the browser.")
+        return summary

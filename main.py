@@ -51,6 +51,10 @@ def main() -> None:
         from jarvis.interfaces import snapshot
 
         snapshot.run(sys.argv[2] if len(sys.argv) > 2 else None)
+    elif mode == "apply":
+        from jarvis.interfaces import apply_jobs
+
+        apply_jobs.run(int(sys.argv[2]) if len(sys.argv) > 2 else 1)
     else:
         print(__doc__)
         sys.exit(1)
