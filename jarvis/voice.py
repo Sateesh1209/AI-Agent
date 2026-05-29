@@ -1,35 +1,57 @@
 """Voice input/output for JARVIS.
 
 * ``listen()``  -> capture speech from the microphone and return text.
-* ``speak()``   -> say text out loud (offline, via pyttsx3).
+* ``speak()``   -> say text out loud.
 
-Both degrade gracefully: if the audio libraries or hardware are missing,
-JARVIS keeps working in text-only mode instead of crashing.
+Text-to-speech prefers macOS's built-in ``say`` command (reliable, natural
+voices) and falls back to the cross-platform ``pyttsx3`` library elsewhere.
+Speech-to-text needs a microphone (PyAudio). Both degrade gracefully: if audio
+isn't available, JARVIS keeps working in text mode instead of crashing.
 """
 
 from __future__ import annotations
 
+import platform
+import shutil
+import subprocess
+
 
 class Speaker:
-    """Offline text-to-speech."""
+    """Text-to-speech. Uses macOS 'say' when available, else pyttsx3."""
 
     def __init__(self, enabled: bool = True):
         self.enabled = enabled
+        self._mode: str | None = None
         self._engine = None
-        if enabled:
-            try:
-                import pyttsx3
+        if not enabled:
+            return
 
-                self._engine = pyttsx3.init()
-            except Exception as exc:  # noqa: BLE001
-                print(f"[voice] Text-to-speech unavailable ({exc}). "
-                      "Continuing in text mode.")
-                self.enabled = False
+        # macOS: the built-in 'say' command is the most reliable + best voices.
+        if platform.system() == "Darwin" and shutil.which("say"):
+            self._mode = "say"
+            return
+
+        # Other platforms: offline pyttsx3.
+        try:
+            import pyttsx3
+
+            self._engine = pyttsx3.init()
+            self._mode = "pyttsx3"
+        except Exception as exc:  # noqa: BLE001
+            print(f"[voice] Text-to-speech unavailable ({exc}). "
+                  "Continuing in text mode.")
+            self.enabled = False
 
     def speak(self, text: str) -> None:
         if not text:
             return
-        if self.enabled and self._engine is not None:
+        if self.enabled and self._mode == "say":
+            try:
+                subprocess.run(["say", text], check=False)
+                return
+            except Exception as exc:  # noqa: BLE001
+                print(f"[voice] Could not speak ({exc}).")
+        elif self.enabled and self._mode == "pyttsx3" and self._engine is not None:
             try:
                 self._engine.say(text)
                 self._engine.runAndWait()
@@ -41,7 +63,7 @@ class Speaker:
 
 
 class Listener:
-    """Speech-to-text from the microphone."""
+    """Speech-to-text from the microphone (requires PyAudio)."""
 
     def __init__(self):
         self._recognizer = None
@@ -49,11 +71,16 @@ class Listener:
         try:
             import speech_recognition as sr
 
+            # A microphone needs PyAudio; check it's importable up front so we
+            # can fall back to typing cleanly instead of erroring every turn.
+            import pyaudio  # noqa: F401
+
             self._sr = sr
             self._recognizer = sr.Recognizer()
         except Exception as exc:  # noqa: BLE001
-            print(f"[voice] Microphone input unavailable ({exc}). "
-                  "Use text input instead.")
+            print(f"[voice] Microphone input not set up ({exc}).")
+            print("[voice] You can type instead. To speak to JARVIS, install "
+                  "the microphone support (see SETUP.md).")
 
     @property
     def available(self) -> bool:
