@@ -7,6 +7,7 @@ Usage:
     python main.py voice      # voice mode
     python main.py telegram   # run the Telegram bot
     python main.py login [url]# open JARVIS's Chrome to log into job sites once
+    python main.py check      # verify your setup (run this first!)
 """
 
 from __future__ import annotations
@@ -33,6 +34,10 @@ def main() -> None:
         from jarvis.interfaces import login
 
         login.run(sys.argv[2] if len(sys.argv) > 2 else None)
+    elif mode == "check":
+        from jarvis.interfaces import selfcheck
+
+        selfcheck.run()
     else:
         print(__doc__)
         sys.exit(1)
