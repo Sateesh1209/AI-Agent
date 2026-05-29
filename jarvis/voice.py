@@ -77,6 +77,10 @@ class Listener:
 
             self._sr = sr
             self._recognizer = sr.Recognizer()
+            # Be more patient so full sentences aren't cut off when you pause.
+            self._recognizer.pause_threshold = 1.8       # wait ~1.8s of silence
+            self._recognizer.dynamic_energy_threshold = True
+            self._recognizer.non_speaking_duration = 0.6
         except Exception as exc:  # noqa: BLE001
             print(f"[voice] Microphone input not set up ({exc}).")
             print("[voice] You can type instead. To speak to JARVIS, install "
@@ -86,7 +90,7 @@ class Listener:
     def available(self) -> bool:
         return self._recognizer is not None
 
-    def listen(self, timeout: int = 8, phrase_time_limit: int = 15) -> str | None:
+    def listen(self, timeout: int = 10, phrase_time_limit: int = 30) -> str | None:
         """Record one phrase and transcribe it. Returns None on failure."""
         if not self.available:
             return None
