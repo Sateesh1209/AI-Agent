@@ -47,6 +47,10 @@ def main() -> None:
         from jarvis.interfaces import browser_check
 
         browser_check.run()
+    elif mode == "snapshot":
+        from jarvis.interfaces import snapshot
+
+        snapshot.run(sys.argv[2] if len(sys.argv) > 2 else None)
     else:
         print(__doc__)
         sys.exit(1)
