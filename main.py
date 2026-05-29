@@ -7,7 +7,8 @@ Usage:
     python main.py voice      # voice mode
     python main.py telegram   # run the Telegram bot
     python main.py login [url]# open JARVIS's Chrome to log into job sites once
-    python main.py check      # verify your setup (run this first!)
+    python main.py check          # verify your setup (run this first!)
+    python main.py setup-profile  # create your job-application profile
 """
 
 from __future__ import annotations
@@ -38,6 +39,10 @@ def main() -> None:
         from jarvis.interfaces import selfcheck
 
         selfcheck.run()
+    elif mode == "setup-profile":
+        from jarvis.interfaces import setup_profile
+
+        setup_profile.run()
     else:
         print(__doc__)
         sys.exit(1)
