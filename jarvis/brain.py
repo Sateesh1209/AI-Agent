@@ -200,16 +200,24 @@ def make_brain(
     return AnthropicBrain(config, registry, system_prompt)
 
 
-def claude_oneshot(prompt: str, timeout: int = 120) -> str:
-    """One-off Claude reasoning via the CLI (no tools), using the subscription.
+def claude_oneshot(prompt: str, image_path: str | None = None,
+                   timeout: int = 150) -> str:
+    """One-off Claude reasoning via the CLI, using the subscription.
 
-    Used by the browser agent to decide the next action from a page's state.
+    If ``image_path`` is given, Claude is allowed to view that screenshot (so it
+    can SEE the page) before deciding. Used by the browser agent each step.
     """
     import json
     import os
     import subprocess
 
-    cmd = ["claude", "-p", prompt, "--output-format", "json"]
+    full = prompt
+    cmd = ["claude", "-p", full, "--output-format", "json"]
+    if image_path:
+        full = f"{prompt}\n\nLook carefully at this screenshot of the current " \
+               f"screen, then decide: {image_path}"
+        cmd = ["claude", "-p", full, "--output-format", "json",
+               "--allowedTools", "Read"]
     env = os.environ.copy()
     env.pop("ANTHROPIC_API_KEY", None)
     try:

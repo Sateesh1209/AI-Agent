@@ -113,10 +113,13 @@ def collect_elements(page) -> list[tuple[object, str]]:
 
 
 class WebAgent:
-    def __init__(self, session, decide: Callable[[str], str], notifier=None):
+    def __init__(self, session, decide: Callable[..., str], notifier=None,
+                 use_vision: bool = False, shot_path: str | None = None):
         self.session = session
-        self.decide = decide  # prompt -> raw text (Claude)
+        self.decide = decide  # (prompt[, image_path]) -> raw text (Claude)
         self.notifier = notifier
+        self.use_vision = use_vision
+        self.shot_path = shot_path or "/tmp/jarvis_step.png"
 
     def run(self, goal: str, max_steps: int = 25) -> str:
         from .downloads import latest_download
@@ -136,7 +139,15 @@ class WebAgent:
                 history="\n".join(history[-6:]) or "(none yet)",
                 elements=elements[:6000] or "(none found)",
             )
-            action = parse_action(self.decide(prompt))
+            # Vision: let Claude SEE the page, not just read its elements.
+            shot = None
+            if self.use_vision:
+                try:
+                    shot = self.session.screenshot(self.shot_path)
+                except Exception:
+                    shot = None
+            raw = self.decide(prompt, shot) if shot else self.decide(prompt)
+            action = parse_action(raw)
             if not action:
                 history.append("could not decide; waiting")
                 page.wait_for_timeout(1500)

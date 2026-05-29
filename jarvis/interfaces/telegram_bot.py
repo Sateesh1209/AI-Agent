@@ -56,7 +56,8 @@ def _run_apply_agent(count: int, notifier) -> None:
             )
             return
         session.focus("jobright")
-        agent = WebAgent(session, decide=claude_oneshot, notifier=notifier)
+        agent = WebAgent(session, decide=claude_oneshot, notifier=notifier,
+                         use_vision=True)
         for n in range(count):
             notifier.send(f"🤖 Working on job {n + 1} of {count}…")
             try:

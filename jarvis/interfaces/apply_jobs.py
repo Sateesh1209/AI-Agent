@@ -34,7 +34,8 @@ def run(how_many: int = 1) -> None:
         return
 
     session.focus("jobright")
-    agent = WebAgent(session, decide=claude_oneshot, notifier=RUNTIME.notifier)
+    agent = WebAgent(session, decide=claude_oneshot, notifier=RUNTIME.notifier,
+                     use_vision=True)
 
     for n in range(how_many):
         print(f"\n===== Applying to job {n+1} of {how_many} =====")
