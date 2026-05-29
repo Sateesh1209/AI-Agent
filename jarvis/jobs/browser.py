@@ -43,7 +43,10 @@ def launch_debug_chrome(debug_dir: str, port: int = 9222,
     ]
     if url:
         args.append(url)
-    return subprocess.Popen(args)
+    # Silence Chrome's noisy internal logging so the terminal stays clean.
+    return subprocess.Popen(
+        args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
 
 class BrowserSession:
@@ -127,6 +130,27 @@ class BrowserSession:
         if self._context and self._context.pages:
             self.page = self._context.pages[-1]
         return self.page
+
+    def focus(self, url_substring: str):
+        """Switch to the open tab whose URL contains ``url_substring``."""
+        for p in (self._context.pages if self._context else []):
+            try:
+                if url_substring in p.url:
+                    self.page = p
+                    return p
+            except Exception:
+                continue
+        return self.page
+
+    def open_tabs(self) -> list[str]:
+        """URLs of all open tabs (for diagnostics)."""
+        out = []
+        for p in (self._context.pages if self._context else []):
+            try:
+                out.append(p.url)
+            except Exception:
+                continue
+        return out
 
     def page_count(self) -> int:
         return len(self._context.pages) if self._context else 0

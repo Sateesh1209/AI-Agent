@@ -43,6 +43,10 @@ def main() -> None:
         from jarvis.interfaces import setup_profile
 
         setup_profile.run()
+    elif mode == "browser-check":
+        from jarvis.interfaces import browser_check
+
+        browser_check.run()
     else:
         print(__doc__)
         sys.exit(1)
