@@ -1,0 +1,20 @@
+# ---- Core brain ----
+anthropic>=0.40.0          # Claude API (primary brain)
+requests>=2.31.0           # used to talk to Ollama (free local brain)
+python-dotenv>=1.0.0       # load settings from .env
+
+# ---- Voice (speak to JARVIS / JARVIS speaks back) ----
+SpeechRecognition>=3.10.0  # speech-to-text
+pyttsx3>=2.90              # offline text-to-speech
+# NOTE: SpeechRecognition needs PyAudio for the microphone.
+#   macOS:  brew install portaudio && pip install pyaudio
+#   Linux:  sudo apt-get install portaudio19-dev && pip install pyaudio
+#   Windows: pip install pyaudio
+
+# ---- Messaging (talk to JARVIS from your phone) ----
+python-telegram-bot>=21.0
+
+# ---- Optional task helpers ----
+playwright>=1.40.0         # browser automation (job portals, web tasks)
+pandas>=2.0.0              # data / spreadsheets
+openpyxl>=3.1.0            # Excel files
