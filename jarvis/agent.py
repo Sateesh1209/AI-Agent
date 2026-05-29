@@ -33,15 +33,29 @@ Guidelines:
 - After finishing, briefly tell the user what you did.
 """
 
+VOICE_NOTE = """
+
+VOICE MODE: The user HEARS your replies spoken aloud by text-to-speech. So:
+- Keep every reply to 1-2 short, natural spoken sentences.
+- Do NOT use markdown, bullet points, headings, asterisks, emojis, or symbols.
+- If the answer is long, give the key point only and offer to say more.
+"""
+
 
 class Jarvis:
     """Main entry point used by every interface (CLI, voice, Telegram)."""
 
-    def __init__(self, config: Config | None = None, notifier: Notifier | None = None):
+    def __init__(
+        self,
+        config: Config | None = None,
+        notifier: Notifier | None = None,
+        voice_mode: bool = False,
+    ):
         self.config = config or default_config
         self.config.validate()
         self.registry = load_builtin_tools()
-        self.brain = make_brain(self.config, self.registry, SYSTEM_PROMPT)
+        prompt = SYSTEM_PROMPT + (VOICE_NOTE if voice_mode else "")
+        self.brain = make_brain(self.config, self.registry, prompt)
 
         # Notifications + scheduling let JARVIS act "on time" and reach the user.
         self.notifier = notifier or ConsoleNotifier()

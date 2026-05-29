@@ -47,7 +47,14 @@ class Speaker:
             return
         if self.enabled and self._mode == "say":
             try:
-                subprocess.run(["say", text], check=False)
+                # Run as a child process so Ctrl+C cuts off speech (and just
+                # returns to listening) instead of killing JARVIS.
+                proc = subprocess.Popen(["say", text])
+                try:
+                    proc.wait()
+                except KeyboardInterrupt:
+                    proc.terminate()
+                    print("\n[voice] (stopped speaking)")
                 return
             except Exception as exc:  # noqa: BLE001
                 print(f"[voice] Could not speak ({exc}).")
