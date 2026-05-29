@@ -40,9 +40,14 @@ def _find_button(session, texts: tuple[str, ...]):
 
 
 def autofill_current_page(
-    session, profile: Profile, resume_file: str | None
+    session, profile: Profile, resume_file: str | None,
+    ask_when_stuck: bool = True,
 ) -> dict[str, list[str]]:
-    """Fill the empty fields on the current page. Returns filled/tricky labels."""
+    """Fill the empty fields on the current page. Returns filled/tricky labels.
+
+    If ``ask_when_stuck`` is True, required fields with no known answer trigger
+    ``ask_user`` (which can escalate to Telegram) instead of being skipped.
+    """
     filled: list[str] = []
     tricky: list[str] = []
     for f in read_form_fields(session):
@@ -62,6 +67,12 @@ def autofill_current_page(
                 tricky.append(f["label"])
         else:  # tricky / custom question
             answer = profile.answer_for(f["label"])
+            if not answer and f["required"] and ask_when_stuck:
+                # Don't have a canned answer — ask the user (escalates to
+                # Telegram if they're away from the laptop).
+                from ..interaction import ask_user
+
+                answer = ask_user(f"For this job application: {f['label']}")
             if answer and session.fill(f["selector"], answer):
                 filled.append(f"{f['label']} -> {answer}")
             elif f["required"]:

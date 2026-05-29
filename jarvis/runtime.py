@@ -14,6 +14,9 @@ from typing import Any
 class Runtime:
     scheduler: Any = None
     notifier: Any = None
+    # When JARVIS is waiting for an answer from the user (e.g. mid-task), this
+    # holds the live PendingQuestion so the Telegram bot can route a reply to it.
+    pending_question: Any = None
 
 
 # Single shared instance populated by the Jarvis agent at startup.

@@ -81,7 +81,7 @@ def _run_autofill(fields, profile, resume="/tmp/r.pdf"):
     session = _FakeSession(fields)
     # autofill_current_page reads fields via read_form_fields(session)
     autofill_mod.read_form_fields = lambda s: s._fields
-    result = autofill_current_page(session, profile, resume)
+    result = autofill_current_page(session, profile, resume, ask_when_stuck=False)
     return session, result
 
 

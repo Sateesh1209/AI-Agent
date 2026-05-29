@@ -68,6 +68,16 @@ def run() -> None:
             await update.message.reply_text("Not authorized.")
             return
         _remember_chat(update)
+
+        # If JARVIS is mid-task and waiting on an answer, this reply IS the answer.
+        from ..runtime import RUNTIME
+
+        pending = RUNTIME.pending_question
+        if pending is not None:
+            pending.respond(update.message.text)
+            await update.message.reply_text("Got it — continuing. 👍")
+            return
+
         reply = jarvis.ask(update.message.text)
         await update.message.reply_text(reply or "(done)")
 
