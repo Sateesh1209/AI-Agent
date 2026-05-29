@@ -54,6 +54,9 @@ which tools to call → tools run on your machine → JARVIS replies.**
 
 ## Setup
 
+> 🆕 **New here?** Follow [**SETUP.md**](SETUP.md) — a beginner-friendly,
+> copy-paste guide to install and test JARVIS on your Mac for free (Ollama).
+
 > Requires **Python 3.10+**. Designed to run on your **local machine** (macOS,
 > Windows, or Linux) — not in the cloud — so it can actually control your
 > computer.
