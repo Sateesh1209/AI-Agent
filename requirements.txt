@@ -14,6 +14,9 @@ pyttsx3>=2.90              # offline text-to-speech
 # ---- Messaging (talk to JARVIS from your phone) ----
 python-telegram-bot>=21.0
 
+# ---- Scheduling (do tasks "on time", recurring jobs, reminders) ----
+APScheduler>=3.10.0
+
 # ---- Optional task helpers ----
 playwright>=1.40.0         # browser automation (job portals, web tasks)
 pandas>=2.0.0              # data / spreadsheets

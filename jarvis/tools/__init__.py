@@ -93,6 +93,6 @@ def tool(name: str, description: str, input_schema: dict[str, Any]):
 
 def load_builtin_tools() -> ToolRegistry:
     """Import the built-in tool modules so they register themselves."""
-    from . import filesystem, shell, system  # noqa: F401
+    from . import filesystem, schedule, shell, system  # noqa: F401
 
     return REGISTRY

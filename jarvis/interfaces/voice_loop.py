@@ -16,6 +16,7 @@ _EXIT_PHRASES = {"stop listening", "goodbye jarvis", "quit", "exit"}
 
 def run() -> None:
     jarvis = Jarvis()
+    jarvis.start_background()  # reminders/recurring tasks fire in the background
     speaker = Speaker(enabled=config.voice_enabled)
     listener = Listener()
 

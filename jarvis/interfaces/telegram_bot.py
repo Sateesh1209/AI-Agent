@@ -1,17 +1,23 @@
-"""Talk to JARVIS from your phone via Telegram.
+"""Talk to JARVIS from your phone via Telegram — and have JARVIS reach YOU.
+
+This interface is two-way:
+* You -> JARVIS: send it instructions from anywhere.
+* JARVIS -> You: it proactively messages you when a reminder or scheduled task
+  fires, even while you're away from the laptop.
 
 Setup:
 1. Message @BotFather on Telegram, run /newbot, and copy the token.
 2. Put the token in .env as TELEGRAM_BOT_TOKEN.
 3. (Recommended) Set TELEGRAM_ALLOWED_USER_ID to your own numeric id so only
-   you can command JARVIS. Send your bot any message and check the logs to
-   find your id.
+   you can command JARVIS. The first time you message the bot, its id is also
+   printed in the logs and captured for proactive messages.
 """
 
 from __future__ import annotations
 
 from ..agent import Jarvis
 from ..config import config
+from ..notify import TelegramNotifier
 
 
 def run() -> None:
@@ -29,7 +35,11 @@ def run() -> None:
         filters,
     )
 
-    jarvis = Jarvis()
+    # Notifier JARVIS uses to message the user (reminders, task results).
+    notifier = TelegramNotifier(config.telegram_token, config.telegram_allowed_user_id)
+    jarvis = Jarvis(notifier=notifier)
+    jarvis.start_background()
+
     allowed = config.telegram_allowed_user_id
 
     def _authorized(update: Update) -> bool:
@@ -37,10 +47,17 @@ def run() -> None:
             return True
         return str(update.effective_user.id) == str(allowed)
 
+    def _remember_chat(update: Update) -> None:
+        # Capture chat id so proactive notifications can reach this user.
+        if not notifier.chat_id:
+            notifier.chat_id = update.effective_chat.id
+
     async def start(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
         print(f"[telegram] user id = {update.effective_user.id}")
+        _remember_chat(update)
         await update.message.reply_text(
-            "JARVIS online. Send me an instruction."
+            "JARVIS online. Send me an instruction — I can also remind you and "
+            "run scheduled tasks while you're away."
         )
 
     async def on_message(
@@ -50,6 +67,7 @@ def run() -> None:
         if not _authorized(update):
             await update.message.reply_text("Not authorized.")
             return
+        _remember_chat(update)
         reply = jarvis.ask(update.message.text)
         await update.message.reply_text(reply or "(done)")
 

@@ -7,6 +7,7 @@ from ..agent import Jarvis
 
 def run() -> None:
     jarvis = Jarvis()
+    jarvis.start_background()  # reminders/recurring tasks fire while you chat
     print("JARVIS (text mode). Type 'quit' to exit.\n")
     while True:
         try:

@@ -12,12 +12,17 @@ Talk to it by voice, text, or from your phone via Telegram.
 - 🧠 **Two brains** — use Claude (Anthropic API) for best quality, or run a
   free, private, offline model with [Ollama](https://ollama.com).
 - 🗣️ **Voice** — speak to JARVIS and hear it reply (offline TTS).
-- 💬 **Telegram** — command JARVIS from your phone.
+- 💬 **Telegram (two-way)** — command JARVIS from your phone, *and* JARVIS
+  messages **you** when a reminder or scheduled task fires (even while you're away).
+- ⏰ **Does things on time** — set one-off reminders ("remind me in 10 min",
+  "at 17:00") and recurring tasks ("every weekday at 9am, apply to 5 new jobs").
+  The scheduler runs in the background and survives restarts.
 - 🛠️ **Real actions on your computer** via tools:
   - run shell commands
   - read / write / list files
   - open apps and URLs
   - report system info
+  - set reminders & schedule recurring tasks
 - 🔌 **Easily extensible** — add a new capability by writing one decorated
   Python function (see *Adding your own tools* below).
 
@@ -30,10 +35,14 @@ jarvis/
   agent.py              # the JARVIS agent (system prompt + wiring)
   brain.py              # LLM backends (Anthropic + Ollama) with a tool loop
   voice.py              # speech-to-text + text-to-speech
+  notify.py             # how JARVIS reaches YOU (console / Telegram)
+  scheduler.py          # runs tasks "on time" (reminders, recurring jobs)
+  store.py              # persists scheduled tasks across restarts
   tools/                # the things JARVIS can actually DO
     shell.py            #   run shell commands
     filesystem.py       #   read/write/list files
     system.py           #   open apps/URLs, system info
+    schedule.py         #   set reminders / schedule recurring tasks
   interfaces/           # ways to talk to JARVIS
     cli.py              #   typed chat
     voice_loop.py       #   voice
@@ -100,6 +109,9 @@ Examples of things to say/type:
 - "Open Spotify."
 - "Create a file called notes.txt with my todo list."
 - "Open github.com in my browser."
+- "Remind me to take a break in 30 minutes."
+- "Every weekday at 9am, apply to 5 new software jobs and message me the results."
+- "What tasks do you have scheduled?"
 
 ## Adding your own tools
 
@@ -125,13 +137,19 @@ def get_weather(city: str) -> str:
 
 Then import your module in `jarvis/tools/__init__.py`'s `load_builtin_tools()`.
 
-## Roadmap ideas
+## Roadmap
 
-- 🌐 Browser automation tool (Playwright) → auto-apply to jobs on Workday,
-  Greenhouse, company sites.
+Done:
+- ✅ Time + Telegram core: scheduler (reminders + recurring tasks) and
+  proactive two-way Telegram.
+
+Next:
+- 🌐 Browser automation tool (Playwright) → access Chrome, auto-apply to jobs
+  on Workday, Greenhouse, company sites.
 - 📅 Calendar / email tools.
-- 🧠 Persistent memory across sessions.
+- 🧠 Persistent conversation memory across sessions.
 - 🔊 Wake-word detection ("Hey JARVIS").
+- ☁️ Always-on deployment so it works 24/7 even with the laptop closed.
 
 ## Safety
 
