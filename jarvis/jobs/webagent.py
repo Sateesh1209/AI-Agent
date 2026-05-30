@@ -25,7 +25,8 @@ TITLE: {title}
 RECENT ACTIONS:
 {history}
 
-INTERACTIVE ELEMENTS (act on one by its [index]):
+INTERACTIVE ELEMENTS (each is outlined with a numbered RED box in the
+screenshot — pick one by its [index]):
 {elements}
 
 Decide the SINGLE next action. Respond with ONLY a JSON object (no prose):
@@ -112,6 +113,77 @@ def collect_elements(page) -> list[tuple[object, str]]:
     return items
 
 
+def collect_marks(page) -> list[tuple[object, str, dict | None]]:
+    """Like collect_elements, but also returns each element's bounding box."""
+    items: list[tuple[object, str, dict | None]] = []
+    try:
+        handles = page.query_selector_all(
+            "button, a, input, textarea, select, [role=button]"
+        )
+    except Exception:
+        return items
+    for h in handles:
+        try:
+            if not h.is_visible():
+                continue
+            box = h.bounding_box()
+            tag = h.evaluate("e => e.tagName").lower()
+            if tag in ("input", "textarea", "select"):
+                kind = (h.get_attribute("type") or tag).lower()
+                if kind == "hidden":
+                    continue
+                label = (h.get_attribute("aria-label") or h.get_attribute("placeholder")
+                         or h.get_attribute("name") or "")
+                try:
+                    val = h.input_value()
+                except Exception:
+                    val = ""
+                desc = f"{kind} field '{label[:40]}' (current='{val[:20]}')"
+            else:
+                text = " ".join((h.inner_text() or "").split())
+                if not text:
+                    continue
+                desc = f"'{text[:50]}'"
+            items.append((h, desc, box))
+        except Exception:
+            continue
+    return items
+
+
+def annotate_marks(page, items, shot_path: str) -> str | None:
+    """Screenshot the viewport and draw a numbered red box on each element.
+
+    Numbers match the element indices so Claude can pick what it SEES and the
+    code clicks the EXACT element handle (no pixel guessing).
+    """
+    try:
+        page.screenshot(path=shot_path, full_page=False)
+    except Exception:
+        return None
+    try:
+        from PIL import Image, ImageDraw
+
+        dsf = page.evaluate("window.devicePixelRatio") or 1
+        vh = page.evaluate("window.innerHeight") or 100000
+        img = Image.open(shot_path).convert("RGB")
+        draw = ImageDraw.Draw(img)
+        for i, (_, _, box) in enumerate(items):
+            if not box or box["y"] < 0 or box["y"] > vh:
+                continue
+            x0, y0 = box["x"] * dsf, box["y"] * dsf
+            x1 = (box["x"] + box["width"]) * dsf
+            y1 = (box["y"] + box["height"]) * dsf
+            draw.rectangle([x0, y0, x1, y1], outline=(255, 0, 0), width=2)
+            ty = max(0, y0 - 15)
+            draw.rectangle([x0, ty, x0 + 9 * len(str(i)) + 6, ty + 14],
+                           fill=(255, 0, 0))
+            draw.text((x0 + 3, ty + 1), str(i), fill=(255, 255, 255))
+        img.save(shot_path)
+        return shot_path
+    except Exception:
+        return shot_path  # plain screenshot if drawing fails
+
+
 class WebAgent:
     def __init__(self, session, decide: Callable[..., str], notifier=None,
                  use_vision: bool = False, shot_path: str | None = None):
@@ -128,8 +200,16 @@ class WebAgent:
         for step in range(max_steps):
             self.session.use_latest_page()
             page = self.session.page
-            items = collect_elements(page)
-            elements = "\n".join(f"[{i}] {d}" for i, (_, d) in enumerate(items))
+
+            # Collect elements with exact positions; mark them on a screenshot.
+            shot = None
+            if self.use_vision:
+                items = collect_marks(page)
+                shot = annotate_marks(page, items, self.shot_path)
+            else:
+                items = [(h, d, None) for h, d in collect_elements(page)]
+
+            elements = "\n".join(f"[{i}] {d}" for i, (_, d, _) in enumerate(items))
             try:
                 title = page.title()
             except Exception:
@@ -139,13 +219,6 @@ class WebAgent:
                 history="\n".join(history[-6:]) or "(none yet)",
                 elements=elements[:6000] or "(none found)",
             )
-            # Vision: let Claude SEE the page, not just read its elements.
-            shot = None
-            if self.use_vision:
-                try:
-                    shot = self.session.screenshot(self.shot_path)
-                except Exception:
-                    shot = None
             raw = self.decide(prompt, shot) if shot else self.decide(prompt)
             action = parse_action(raw)
             if not action:
@@ -173,7 +246,7 @@ class WebAgent:
                 history.append(f"invalid index {idx}")
                 continue
 
-            handle, desc = items[idx]
+            handle, desc, _box = items[idx]
             try:
                 if a == "click":
                     handle.click(timeout=8000)
