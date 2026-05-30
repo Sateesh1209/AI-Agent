@@ -55,6 +55,10 @@ def main() -> None:
         from jarvis.interfaces import apply_jobs
 
         apply_jobs.run(int(sys.argv[2]) if len(sys.argv) > 2 else 1)
+    elif mode == "screen-apply":
+        from jarvis.interfaces import screen_apply
+
+        screen_apply.run()
     else:
         print(__doc__)
         sys.exit(1)

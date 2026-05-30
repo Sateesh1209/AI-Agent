@@ -17,6 +17,10 @@ python-telegram-bot>=21.0
 # ---- Scheduling (do tasks "on time", recurring jobs, reminders) ----
 APScheduler>=3.10.0
 
+# ---- Screen control (experimental: operate the real screen) ----
+pyautogui>=0.9.54          # screenshot + mouse/keyboard control
+pillow>=10.0.0             # screenshots (used by pyautogui)
+
 # ---- Optional task helpers ----
 playwright>=1.40.0         # browser automation (job portals, web tasks)
 pandas>=2.0.0              # data / spreadsheets
