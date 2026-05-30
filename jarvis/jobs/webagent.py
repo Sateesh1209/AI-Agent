@@ -39,6 +39,8 @@ Rules:
 - "upload": attach the freshly-downloaded resume to the file input at "index".
 - "wait": page is still loading or generating; pause and look again.
 - "ask_user": you need info you don't have — put the question in "value".
+- "login": a sign-in form is shown — try JARVIS's SAVED credentials for this
+  site. (If none are saved, JARVIS will ask the user instead.)
 - NEVER click a final Submit / Apply-confirm button. Instead use "ask_user"
   with value starting "CONFIRM_SUBMIT: " and a summary, so the human approves.
 - "done": the goal is finished (submitted, or handed to the user).
@@ -186,12 +188,46 @@ def annotate_marks(page, items, shot_path: str) -> str | None:
 
 class WebAgent:
     def __init__(self, session, decide: Callable[..., str], notifier=None,
-                 use_vision: bool = False, shot_path: str | None = None):
+                 use_vision: bool = False, shot_path: str | None = None,
+                 vault=None):
         self.session = session
         self.decide = decide  # (prompt[, image_path]) -> raw text (Claude)
         self.notifier = notifier
         self.use_vision = use_vision
         self.shot_path = shot_path or "/tmp/jarvis_step.png"
+        self.vault = vault  # unlocked Vault for saved logins (optional)
+
+    def _try_login(self, page, history: list[str]) -> None:
+        """Fill saved credentials for the current site, else ask the user."""
+        cred = self.vault.find_for(page.url) if self.vault else None
+        if not cred:
+            ans = ask_user(
+                f"LOGIN NEEDED at {getattr(page, 'url', 'this portal')} — "
+                "please sign in, then reply done"
+            )
+            history.append(f"asked user to log in -> {ans}")
+            return
+        try:
+            for sel in ("input[type=email]", "input[name*='user' i]",
+                        "input[id*='user' i]", "input[type=text]"):
+                el = page.query_selector(sel)
+                if el and el.is_visible():
+                    el.fill(cred["username"])
+                    break
+            pw = page.query_selector("input[type=password]")
+            if pw:
+                pw.fill(cred["password"])
+            for sel in ("button[type=submit]", "button:has-text('Sign in')",
+                        "button:has-text('Log in')", "button:has-text('Continue')"):
+                btn = page.query_selector(sel)
+                if btn and btn.is_visible():
+                    btn.click()
+                    break
+            page.wait_for_timeout(2500)
+            history.append(f"auto-logged in to {cred['site']}")
+        except Exception as exc:  # noqa: BLE001
+            history.append(f"auto-login failed ({exc}); asking user")
+            ask_user(f"Couldn't auto-log in to {cred['site']} — sign in, reply done")
 
     def run(self, goal: str, max_steps: int = 25) -> str:
         from .downloads import latest_download
@@ -241,6 +277,9 @@ class WebAgent:
             if a == "ask_user":
                 answer = ask_user(val) or "(no answer)"
                 history.append(f"asked: {val[:60]} -> {answer[:60]}")
+                continue
+            if a == "login":
+                self._try_login(page, history)
                 continue
             if idx is None or not (0 <= idx < len(items)):
                 history.append(f"invalid index {idx}")

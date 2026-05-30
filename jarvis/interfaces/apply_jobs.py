@@ -10,7 +10,30 @@ your OK before any final submit.
 
 from __future__ import annotations
 
+import os
 import sys
+
+
+def _unlock_vault():
+    """Unlock the saved-login vault if it exists (env password or prompt)."""
+    from pathlib import Path
+
+    from ..vault import DEFAULT_PATH
+
+    if not Path(DEFAULT_PATH).exists():
+        return None
+    master = os.getenv("JARVIS_VAULT_PASSWORD")
+    if not master:
+        from getpass import getpass
+        master = getpass("Vault master password (Enter to skip auto-login): ")
+    if not master:
+        return None
+    try:
+        from ..vault import Vault
+        return Vault(master)
+    except Exception as exc:  # noqa: BLE001
+        print(f"(vault not unlocked: {exc})")
+        return None
 
 
 def run(how_many: int = 1) -> None:
@@ -24,6 +47,10 @@ def run(how_many: int = 1) -> None:
         print("⚠️  The job agent works best with JARVIS_BACKEND=claude_code "
               "(your Claude Max plan). Continuing anyway.")
 
+    vault = _unlock_vault()
+    if vault:
+        print("🔐 Vault unlocked — JARVIS can use your saved logins.")
+
     session = BrowserSession.from_config(config)
     try:
         session.start()
@@ -35,7 +62,7 @@ def run(how_many: int = 1) -> None:
 
     session.focus("jobright")
     agent = WebAgent(session, decide=claude_oneshot, notifier=RUNTIME.notifier,
-                     use_vision=True)
+                     use_vision=True, vault=vault)
 
     for n in range(how_many):
         print(f"\n===== Applying to job {n+1} of {how_many} =====")

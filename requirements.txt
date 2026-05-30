@@ -26,3 +26,4 @@ playwright>=1.40.0         # browser automation (job portals, web tasks)
 pandas>=2.0.0              # data / spreadsheets
 openpyxl>=3.1.0            # Excel files
 pypdf>=4.0.0               # read text from an existing PDF resume (optional)
+cryptography>=42.0.0       # encrypt your saved portal logins (vault)

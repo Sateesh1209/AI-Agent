@@ -63,6 +63,10 @@ def main() -> None:
         from jarvis.interfaces import prep
 
         prep.run()
+    elif mode == "vault":
+        from jarvis.interfaces import vault_cli
+
+        vault_cli.run()
     else:
         print(__doc__)
         sys.exit(1)
