@@ -1,0 +1,39 @@
+{
+  "full_name": "Sateesh N",
+  "email": "sateesh195.n@gmail.com",
+  "phone": "+1 555 123 4567",
+  "location": "City, Country",
+  "linkedin": "https://www.linkedin.com/in/your-handle",
+  "github": "https://github.com/your-handle",
+  "website": "https://your-portfolio.com",
+  "summary": "Software engineer with X years of experience building ...",
+  "skills": ["Python", "JavaScript", "React", "AWS", "SQL"],
+  "experience": [
+    {
+      "title": "Software Engineer",
+      "company": "Example Corp",
+      "start": "2022",
+      "end": "Present",
+      "bullets": [
+        "Built and shipped feature X used by N users.",
+        "Reduced Y latency by Z% by doing ...."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "B.Tech, Computer Science",
+      "school": "Your University",
+      "year": "2021"
+    }
+  ],
+  "base_resume_path": "/Users/you/Documents/resume.pdf",
+  "answers": {
+    "authorized to work": "Yes",
+    "require sponsorship": "No",
+    "willing to relocate": "Yes",
+    "notice period": "2 weeks",
+    "salary": "Negotiable",
+    "how did you hear": "Company website"
+  }
+}
