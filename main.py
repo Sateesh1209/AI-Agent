@@ -59,6 +59,10 @@ def main() -> None:
         from jarvis.interfaces import screen_apply
 
         screen_apply.run()
+    elif mode == "prep":
+        from jarvis.interfaces import prep
+
+        prep.run()
     else:
         print(__doc__)
         sys.exit(1)
